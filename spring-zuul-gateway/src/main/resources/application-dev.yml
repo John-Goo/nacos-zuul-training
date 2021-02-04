@@ -1,0 +1,9 @@
+#server
+server:
+  port: 9000
+zuul:
+  routes:
+    sale-provider:
+      path: /sale/**
+      #serviceId: spring-zuul-sale
+      url: http://localhost:8081

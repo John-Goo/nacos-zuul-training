@@ -1,0 +1,23 @@
+#Spring
+spring:
+  application:
+    name: spring-zuul-member
+  cloud:
+    nacos:
+      discovery:
+        server-addr: nacos.wit2cloud.com:8848
+
+      config:
+        server-addr: nacos.wit2cloud.com:8848
+        file-extension: yaml
+        #ext-config[0]:
+          #data-id: mybatis.yml
+          #group: DEFAULT_GROUP
+          #refresh: true
+  main:
+    allow-bean-definition-overriding: true
+  #profile
+  profiles:
+    active: dev
+
+
