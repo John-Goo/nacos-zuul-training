@@ -2,6 +2,11 @@
 spring:
   application:
     name: spring-zuul-gateway
+  http:
+    encoding:
+      charset: UTF-8
+      enabled: true
+      force: true
   cloud:
     nacos:
       discovery:

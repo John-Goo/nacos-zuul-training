@@ -5,5 +5,9 @@ zuul:
   routes:
     sale-provider:
       path: /sale/**
-      #serviceId: spring-zuul-sale
-      url: http://localhost:8081
+      serviceId: spring-zuul-sale
+      #url: http://localhost:8081
+
+#loggingredisson
+logging:
+  config: classpath:logback.xml
