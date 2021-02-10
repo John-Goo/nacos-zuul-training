@@ -5,12 +5,19 @@ package org.crazyit.cloud.filter;
  * Created By 开源学社
  ==========================================================================*/
 
+import com.alibaba.cloud.nacos.NacosDiscoveryProperties;
 import com.alibaba.fastjson.JSON;
+import com.alibaba.nacos.api.exception.NacosException;
+import com.alibaba.nacos.api.naming.NamingService;
+import com.alibaba.nacos.api.naming.pojo.Instance;
+import com.alibaba.nacos.client.naming.NacosNamingService;
 import com.netflix.zuul.ZuulFilter;
 import com.netflix.zuul.context.RequestContext;
+import io.swagger.models.auth.In;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang.StringUtils;
 import org.crazyit.cloud.common.WResult;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cloud.netflix.zuul.filters.ProxyRequestHelper;
 import org.springframework.cloud.netflix.zuul.filters.Route;
 import org.springframework.cloud.netflix.zuul.filters.RouteLocator;
@@ -25,6 +32,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.List;
 
 /**
  * @author John Goo
@@ -43,14 +51,17 @@ public class MyFilter extends ZuulFilter {
     @Deprecated
     public static final int FILTER_ORDER = 1;
 
+    // 灰度服务组
+    public static final String _GRAY_GROUP = "gray";
+
 
     @Resource
     private RouteLocator routeLocator;
 
-
     private UrlPathHelper urlPathHelper = new UrlPathHelper();
 
-    private ProxyRequestHelper proxyRequestHelper;
+    @Autowired
+    private NacosDiscoveryProperties nacosDiscoveryProperties;
 
     public MyFilter() {
     }
@@ -81,12 +92,9 @@ public class MyFilter extends ZuulFilter {
         RequestContext ctx = RequestContext.getCurrentContext();
         HttpServletRequest request = ctx.getRequest();
         HttpServletResponse response = ctx.getResponse();
-        String memberIdStr = request.getHeader("memberId");
+        String version = request.getHeader("version");
         String token = request.getHeader("token");
-        long memberId =0L;
-        if(memberIdStr != null ){
-            memberId = Long.valueOf(memberIdStr);
-        }
+
         if(StringUtils.isBlank(token)) {
             WResult result = WResult.newInstance();
             //如果token 等于null   返回状态码和没有权限的信息给前台
@@ -100,16 +108,27 @@ public class MyFilter extends ZuulFilter {
         }
 
         // 灰度环境
-        if(memberId < 100) {
+        if("v1.5.0".compareTo(version) < 0) {
             final String requestURI = this.urlPathHelper.getPathWithinApplication(ctx.getRequest());
             log.info("  requestURI:"+requestURI);
-            log.info("  http uri:"+request.getRequestURI());
             // 获取请求路由信息
             Route route = this.routeLocator.getMatchingRoute(requestURI);
-            System.out.println(" >>> Route:" + JSON.toJSON(route));
-            String location = "http://localhost:7001";
-            log.info(" == location：" + location);
-            ctx.setRouteHost(getUrl(location));
+            String serviceId = route.getLocation();
+            //获取服务发现客户端
+            NamingService namingService = nacosDiscoveryProperties.namingServiceInstance();
+            try {
+                Instance instance =  namingService.selectOneHealthyInstance(serviceId,_GRAY_GROUP);
+                log.info(" >>> Route:" + JSON.toJSON(route));
+                if(instance == null){
+                    // 非灰度服务
+                    return null;
+                }
+                String location = String.format("http://%s:%s",instance.getIp(),instance.getPort());
+                log.info(" == 转发灰度服务location：" + location);
+                ctx.setRouteHost(getUrl(location));
+            } catch (NacosException e) {
+                log.error(" 获取动态IP发生了异常",e);
+            }
         }
         return null;
     }
