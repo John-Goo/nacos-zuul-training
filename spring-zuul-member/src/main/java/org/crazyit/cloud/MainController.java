@@ -15,7 +15,7 @@ public class MainController {
 	public Member getMember(@PathVariable Integer id) {
 		Member p = new Member();
 		p.setId(id);
-		p.setName("angus");
+		p.setName("angus-"+id);
 		System.out.println("会员信息===>"+ JSON.toJSON(p));
 		return p;
 	}

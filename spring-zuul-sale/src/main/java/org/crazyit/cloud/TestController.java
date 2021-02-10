@@ -16,7 +16,8 @@ public class TestController {
 	public String foodSale(@PathVariable Integer memberId) {
 		Member m = memberClient.getMember(memberId);
 		System.out.println(m.getId() + "---" + m.getName());
-		return "success";
+		String msg = "会员编号："+memberId+",会员名称："+m.getName();
+		return msg;
 	}
 
 }
